@@ -1,4 +1,8 @@
 #!/bin/bash
+#################
+#Author Vivek Singh, Postgres Specialist Technical Account Manager, AWS
+#5/17/2019
+#################
 clear
 echo -n -e  "RDS Postgres Instance Name: "
 read RDSNAME
