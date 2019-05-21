@@ -10,16 +10,17 @@ echo -n -e "RDS Postgres Endpoint URL: "
 read EP
 echo -n -e "Database Name: "
 read DBNAME
-echo -n -e "RDS master user name: "
+echo -n -e "RDS Master User Name: "
 read MASTERUSER
 echo -n -e "Password: "
-read -s MYPASS
+read -s  MYPASS
+echo  ""
 echo -n -e "Company Name: "
 read COMNAME
 
 #SQLs Used In the Script:
 
-#Idele Connections 
+#Idele Connections
 SQL1="select count(*) from pg_stat_activity where state='idle';"
 
 #Size of all databases
@@ -27,11 +28,11 @@ SQL2="SELECT pg_database.datname,
 pg_database_size(pg_database.datname) as "DB_Size",
 pg_size_pretty(pg_database_size(pg_database.datname)) as "Pretty_DB_size"
  FROM pg_database ORDER by 2 DESC;"
- 
-#Size only of all databases 
+
+#Size only of all databases
 SQL3="SELECT pg_database_size(pg_database.datname)  FROM pg_database"
 
-#Top 10 biggest tables 
+#Top 10 biggest tables
 SQL4="Select schemaname as table_schema,
      relname as table_name,
      pg_size_pretty(pg_total_relation_size(relid)) as "Total_Size",
@@ -42,8 +43,8 @@ SQL4="Select schemaname as table_schema,
  order by pg_total_relation_size(relid) desc,
           pg_relation_size(relid) desc
  limit 10;"
- 
-#Duplticate Indexes 
+
+#Duplticate Indexes
 SQL5="SELECT pg_size_pretty(SUM(pg_relation_size(idx))::BIGINT) AS SIZE,
        (array_agg(idx))[1] AS idx1, (array_agg(idx))[2] AS idx2,
        (array_agg(idx))[3] AS idx3, (array_agg(idx))[4] AS idx4
@@ -54,7 +55,7 @@ FROM (
 GROUP BY KEY HAVING COUNT(*)>1
 ORDER BY SUM(pg_relation_size(idx)) DESC;"
 
-#Unused Indexes 
+#Unused Indexes
 SQL6="SELECT s.schemaname,
        s.relname AS tablename,
        s.indexrelname AS indexname,
@@ -66,12 +67,12 @@ WHERE s.idx_scan = 0      -- has never been scanned
   AND NOT EXISTS          -- does not enforce a constraint
          (SELECT 1 FROM pg_catalog.pg_constraint c
           WHERE c.conindid = s.indexrelid)
-ORDER BY pg_relation_size(s.indexrelid) DESC limit 15;" 
+ORDER BY pg_relation_size(s.indexrelid) DESC limit 15;"
 
-#Database Age 
+#Database Age
 SQL7="select datname, ltrim(to_char(age(datfrozenxid), '999,999,999,999,999')) age from pg_database where datname not like 'rdsadmin';"
 
-#Most Bloated Tables 
+#Most Bloated Tables
 SQL8="SELECT
   current_database(), schemaname, tablename, /*reltuples::bigint, relpages::bigint, otta,*/
   ROUND((CASE WHEN otta=0 THEN 0.0 ELSE sml.relpages::FLOAT/otta END)::NUMERIC,1) AS tbloat,
@@ -120,17 +121,17 @@ ORDER BY wastedbytes DESC LIMIT 10;"
 
 #Top 10 biggest tables last vacuumed
 SQL9="SELECT
-schemaname, relname,last_vacuum, cast(last_autovacuum as date), cast(last_analyze as date), cast(last_autoanalyze as date), 
-pg_size_pretty(pg_total_relation_size(table_name)) as table_total_size 
+schemaname, relname,last_vacuum, cast(last_autovacuum as date), cast(last_analyze as date), cast(last_autoanalyze as date),
+pg_size_pretty(pg_total_relation_size(table_name)) as table_total_size
 from pg_stat_user_tables a, information_schema.tables b where a.relname=b.table_name ORDER BY pg_total_relation_size(table_name) DESC limit 10;"
 
-#Memory Parameters 
+#Memory Parameters
 SQL10="select name, setting, source, context from pg_settings where name like '%mem%' or name ilike '%buff%'; "
 
-#Performance Parameters 
+#Performance Parameters
 SQL11="select name, setting from pg_settings where name IN ('shared_buffers', 'effective_cache_size', 'work_mem', 'maintenance_work_mem', 'default_statistics_target', 'random_page_cost', 'rds.logical_replication','wal_keep_segments');"
 
-html=${RDSNAME}_report.html
+html=${RDSNAME}_report_$(date +"%m-%d-%y").html
 #Generating HTML file
 echo "<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">" > $html
 echo "<html>" >> $html
@@ -163,7 +164,7 @@ else
 
 echo "Instance is running. Creating Report..."
 fi
-echo "Postgres Engine Version: " >>$html 
+echo "Postgres Engine Version: " >>$html
 echo `PGPASSWORD=$MYPASS $PSQLCL -c "SELECT version()" | awk 'FNR== 3'  `  >>$html
 echo "<br>" >> $html
 echo "Maximum Connections :" >>$html
@@ -176,7 +177,7 @@ echo "Idle Connections : `PGPASSWORD=$MYPASS $PSQLCL -c "$SQL1" | awk 'FNR== 3'`
 echo "<br>" >> $html
 echo "<br>" >> $html
 echo "<font face="verdana" color="#ff6600">Instance Configuration: </font>" >>$html
-aws rds describe-db-instances --db-instance-identifier $RDSNAME | grep 'Allocated\|Public\|MonitoringInterval\|MultiAZ\|\StorageType\|\BackupRetentionPeriod\|DBInstanceClass'|sed "s/\"//g"|sed "s/\,//g"| sed "s/\PubliclyAccessible/<br>Publicly Accessible/g"| sed "s/\MonitoringInterval/<br>EM Monitoring Interval/g" | sed "s/\MultiAZ/<br>Multi AZ Enabled?/g" | sed "s/\AllocatedStorage/<br>Allocated Storage (GB)/g" |  sed "s/\DBInstanceClass/<br>DB Instance Class/g" | sed "s/\BackupRetentionPeriod/<br>Backup Retention Period/g" | sed "s/\StorageType/<br>Storage Type/g" |  sed "s/\ B//g"|sed "s/\gp2/GP2/g" >>$html 
+aws rds describe-db-instances --db-instance-identifier $RDSNAME | grep 'Allocated\|Public\|MonitoringInterval\|MultiAZ\|\StorageType\|\BackupRetentionPeriod\|DBInstanceClass'|sed "s/\"//g"|sed "s/\,//g"| sed "s/\PubliclyAccessible/<br>Publicly Accessible/g"| sed "s/\MonitoringInterval/<br>EM Monitoring Interval/g" | sed "s/\MultiAZ/<br>Multi AZ Enabled?/g" | sed "s/\AllocatedStorage/<br>Allocated Storage (GB)/g" |  sed "s/\DBInstanceClass/<br>DB Instance Class/g" | sed "s/\BackupRetentionPeriod/<br>Backup Retention Period/g" | sed "s/\StorageType/<br>Storage Type/g" |  sed "s/\ B//g"|sed "s/\gp2/GP2/g" >>$html
 echo "<br>" >> $html
 echo "<br>" >> $html
 
@@ -211,7 +212,7 @@ echo "<br>" >> $html
 echo "<font face="verdana" color="#ff6600">Top 10 Biggest Tables: </font>" >>$html
 echo "<br>" >> $html
 echo "`PGPASSWORD=$MYPASS $PSQLCL --html -c "
- $SQL4 
+ $SQL4
 "|sed '$d'|sed '$d' ` " >>$html
 
 echo "<br>" >> $html
@@ -221,7 +222,7 @@ echo "<br>" >> $html
 
 
 echo "`PGPASSWORD=$MYPASS $PSQLCL --html -c "
-$SQL5 
+$SQL5
 "|sed '$d'|sed '$d' ` " >>$html
 
 
@@ -230,7 +231,7 @@ echo "<br>" >> $html
 echo "<font face="verdana" color="#ff6600">Unused Indexes: </font>" >>$html
 echo "<br>" >> $html
 echo "`PGPASSWORD=$MYPASS $PSQLCL --html -c "
-$SQL6 
+$SQL6
 "|sed '$d'|sed '$d' ` " >>$html
 
 
@@ -239,7 +240,7 @@ echo "<br>" >> $html
 echo "<font face="verdana" color="#ff6600">Database Age: </font>" >>$html
 echo "<br>" >> $html
 echo "`PGPASSWORD=$MYPASS $PSQLCL --html -c "
-$SQL7 
+$SQL7
 "|sed '$d'|sed '$d' ` " >>$html
 
 
@@ -248,7 +249,7 @@ echo "<br>" >> $html
 echo "<font face="verdana" color="#ff6600">Most Bloated Tables: </font>" >>$html
 echo "<br>" >> $html
 echo "`PGPASSWORD=$MYPASS $PSQLCL --html -c "
-$SQL8 
+$SQL8
 "|sed '$d'|sed '$d' ` " >>$html
 
 echo "<br>" >> $html
@@ -287,7 +288,4 @@ echo "<br>" >> $html
 echo "<br>" >> $html
 echo "<br>" >> $html
 sleep 1
-echo "Done."
-
-
-
+echo "Report $html created!!"
