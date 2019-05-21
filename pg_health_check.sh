@@ -13,7 +13,7 @@ read DBNAME
 echo -n -e "RDS master user name: "
 read MASTERUSER
 echo -n -e "Password: "
-read MYPASS
+read -s MYPASS
 echo -n -e "Company Name: "
 read COMNAME
 
