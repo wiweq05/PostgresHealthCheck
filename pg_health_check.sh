@@ -1,6 +1,6 @@
 #!/bin/bash
 #################
-#Author Vivek Singh, Postgres Specialist Technical Account Manager, AWS
+#Author: Vivek Singh, Postgres Specialist Technical Account Manager, AWS
 #5/17/2019
 #################
 clear
@@ -20,7 +20,7 @@ read COMNAME
 
 #SQLs Used In the Script:
 
-#Idele Connections
+#Idle Connections
 SQL1="select count(*) from pg_stat_activity where state='idle';"
 
 #Size of all databases
@@ -170,7 +170,7 @@ echo "<br>" >> $html
 echo "Maximum Connections :" >>$html
 echo  `PGPASSWORD=$MYPASS $PSQLCL -c "show max_connections" | awk 'FNR== 3'`  >>$html
 echo "<br>" >> $html
-echo "Curent Active Connections: " >>$html
+echo "Current Active Connections: " >>$html
 echo `PGPASSWORD=$MYPASS $PSQLCL -c "select count(*) from pg_stat_activity;" | awk 'FNR== 3'`  >>$html
 echo "<br>" >> $html
 echo "Idle Connections : `PGPASSWORD=$MYPASS $PSQLCL -c "$SQL1" | awk 'FNR== 3'` " >>$html
