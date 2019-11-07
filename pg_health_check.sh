@@ -1,10 +1,10 @@
 #!/bin/bash
 #################
 #Author: Vivek Singh, Postgres Specialist Technical Account Manager, AWS
-#5/17/2019
+#V-12 : 5/17/2019
 #################
 clear
-echo -n -e  "RDS Postgres Instance Name: "
+echo -n -e  "RDS Postgres Instance Identifier: "
 read RDSNAME
 echo -n -e "RDS Postgres Endpoint URL: "
 read EP
@@ -12,6 +12,8 @@ echo -n -e "Database Name: "
 read DBNAME
 echo -n -e "RDS Master User Name: "
 read MASTERUSER
+echo -n -e "Port: "
+read RDSPORT
 echo -n -e "Password: "
 read -s  MYPASS
 echo  ""
@@ -20,7 +22,7 @@ read COMNAME
 
 #SQLs Used In the Script:
 
-#Idle Connections
+#Idele Connections
 SQL1="select count(*) from pg_stat_activity where state='idle';"
 
 #Size of all databases
@@ -138,12 +140,9 @@ echo "<html>" >> $html
 echo "<link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css">" >> $html
 echo "<body style="font-family:'Verdana'" bgcolor="#F8F8F8">" >> $html
 echo "<fieldset>" >> $html
-echo "<center>" >> $html
-echo "<h1><font face="verdana" color="#0099cc"><u>Postgres Health Report For $COMNAME</u></font></h1>" >> $html
-echo "</center>" >> $html
-echo "<br>" >> $html
+echo "<table><tr> <td width="20"></td> <td>" >>$html
+echo "<h1><font face="verdana" color="#0099cc"><center><u>Postgres Health Report For $COMNAME</u></center></font></h1>" >> $html
 echo "<h3><font face="verdana">Postgres Specialist - Enterprise Support</h3></color>" >> $html
-echo "<br>" >> $html
 echo "<font face="verdana">Vivek Singh - `date +%m-%d-%Y`" >> $html
 
 echo "</fieldset>" >> $html
@@ -156,7 +155,7 @@ echo "Postgres Instance Identifier: $RDSNAME" >> $html
 echo "<br>" >> $html
 
 
-PSQLCL="psql -h $EP  -p 5432 -U $MASTERUSER $DBNAME"
+PSQLCL="psql -h $EP  -p $RDSPORT -U $MASTERUSER $DBNAME"
 if [ "$?" -gt "0" ]; then
 INSTSTAT=("Not Running")
 exit
@@ -170,7 +169,7 @@ echo "<br>" >> $html
 echo "Maximum Connections :" >>$html
 echo  `PGPASSWORD=$MYPASS $PSQLCL -c "show max_connections" | awk 'FNR== 3'`  >>$html
 echo "<br>" >> $html
-echo "Current Active Connections: " >>$html
+echo "Curent Active Connections: " >>$html
 echo `PGPASSWORD=$MYPASS $PSQLCL -c "select count(*) from pg_stat_activity;" | awk 'FNR== 3'`  >>$html
 echo "<br>" >> $html
 echo "Idle Connections : `PGPASSWORD=$MYPASS $PSQLCL -c "$SQL1" | awk 'FNR== 3'` " >>$html
@@ -196,7 +195,6 @@ echo "<br>" >> $html
 echo $((ERT / AGB)) | sed 's/$/ GB/' >>$html
 echo "<br>" >> $html
 echo "<br>" >> $html
-echo "<br>" >> $html
 echo "<font face="verdana" color="#ff6600">Total Size of ALL Databases:  </font>" >>$html
 PGPASSWORD=$MYPASS $PSQLCL -c "$SQL3" |  sed '$d' | sed '$d'| tail -n +3 > ret.txt
 ADB=`awk '{ sum += $1 } END { print sum }' ret.txt`
@@ -206,7 +204,6 @@ echo "<br>" >> $html
 echo $((ADB / AGB)) | sed 's/$/ GB/' >>$html
 
 
-echo "<br>" >> $html
 echo "<br>" >> $html
 echo "<br>" >> $html
 echo "<font face="verdana" color="#ff6600">Top 10 Biggest Tables: </font>" >>$html
@@ -287,5 +284,8 @@ $SQL11
 echo "<br>" >> $html
 echo "<br>" >> $html
 echo "<br>" >> $html
+
+echo "</td></tr></table></body></html>" >> $html
+
 sleep 1
-echo "Report $html created!!"
+echo "Report `pwd`/$html created!"
